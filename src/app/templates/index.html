@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Tournament Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/style.css') }}">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <header class="bg-blue-800 text-white shadow-md">
+        <div class="container mx-auto px-4 py-6">
+            <h1 class="text-3xl font-bold">Chess Tournament Explorer</h1>
+            <p class="text-lg mt-2">Find and explore upcoming chess tournaments</p>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8">
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Search Tournaments</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div>
+                    <label for="month" class="block text-gray-700 mb-1">Month</label>
+                    <select id="month" class="w-full p-2 border rounded">
+                        <option value="">All Months</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div>
+                    <label for="year" class="block text-gray-700 mb-1">Year</label>
+                    <select id="year" class="w-full p-2 border rounded">
+                        <option value="">All Years</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+                <div>
+                    <label for="category" class="block text-gray-700 mb-1">Category</label>
+                    <select id="category" class="w-full p-2 border rounded">
+                        <option value="">All Categories</option>
+                        <!-- Will be populated by JavaScript -->
+                    </select>
+                </div>
+            </div>
+            <div class="text-center">
+                <button id="search-btn" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition duration-200">
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <div id="tournaments-container" class="bg-white rounded-lg shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4">Tournaments</h2>
+            <div id="loading" class="text-center py-4 hidden">
+                <svg class="animate-spin h-8 w-8 mx-auto text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <p class="mt-2 text-gray-600">Loading tournaments...</p>
+            </div>
+            <div id="tournaments-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Will be populated by JavaScript -->
+            </div>
+            <div id="no-results" class="text-center py-4 hidden">
+                <p class="text-gray-600">No tournaments found matching your criteria.</p>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-gray-800 text-white py-6 mt-8">
+        <div class="container mx-auto px-4 text-center">
+            <p>Chess Tournament Explorer &copy; 2025</p>
+            <p class="mt-2 text-gray-400">Data sourced from Schachinter.net</p>
+        </div>
+    </footer>
+
+    <!-- Tournament card template -->
+    <template id="tournament-card-template">
+        <div class="tournament-card bg-white rounded shadow-md p-4 border-l-4 border-blue-600 hover:shadow-lg transition duration-200">
+            <h3 class="tournament-name text-lg font-semibold truncate"></h3>
+            <div class="tournament-date text-gray-600 mt-1"></div>
+            <div class="tournament-location mt-2"></div>
+            <div class="tournament-type mt-2">
+                <span class="tournament-type-badge px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800"></span>
+                <span class="tournament-category-badge ml-2 px-2 py-1 text-xs rounded-full bg-green-100 text-green-800"></span>
+            </div>
+            <div class="mt-3">
+                <a href="#" class="tournament-url text-blue-600 hover:underline text-sm" target="_blank">Visit website →</a>
+            </div>
+        </div>
+    </template>
+
+    <script src="{{ url_for('static', path='/js/main.js') }}"></script>
+</body>
+</html> 

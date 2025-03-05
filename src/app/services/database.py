@@ -37,6 +37,7 @@ class SupabaseClient:
             # Create an in-memory store for tournaments
             self.tournaments = []
             logger.info("Mock database client initialized successfully")
+            logger.debug(f"Initial database state: {len(self.tournaments)} tournaments")
         except Exception as e:
             logger.error(f"Failed to initialize mock database: {str(e)}")
             raise
@@ -69,6 +70,8 @@ class SupabaseClient:
                 
             self.tournaments.append(tournament_dict)
             logger.info(f"Tournament inserted: {tournament.name}")
+            logger.debug(f"Current database state: {len(self.tournaments)} tournaments")
+            logger.debug(f"Inserted tournament data: {tournament_dict}")
             return tournament_dict
         except Exception as e:
             logger.error(f"Error inserting tournament {tournament.name}: {str(e)}")
@@ -85,6 +88,7 @@ class SupabaseClient:
             List of tournament dictionaries
         """
         try:
+            logger.debug(f"Get tournaments called. Current count: {len(self.tournaments)}")
             if not filters:
                 logger.info(f"Retrieved {len(self.tournaments)} tournaments")
                 return self.tournaments
@@ -170,11 +174,15 @@ class SupabaseClient:
             True if the tournament exists, False otherwise
         """
         try:
+            logger.debug(f"Checking if tournament exists: {name} {month} {year}")
+            logger.debug(f"Current tournaments count: {len(self.tournaments)}")
             for tournament in self.tournaments:
                 if (tournament.get('name') == name and 
                     tournament.get('month') == month and 
                     tournament.get('year') == year):
+                    logger.debug(f"Tournament already exists: {name}")
                     return True
+            logger.debug(f"Tournament does not exist: {name}")
             return False
         except Exception as e:
             logger.error(f"Error checking tournament existence: {str(e)}")

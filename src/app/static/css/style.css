@@ -1,0 +1,42 @@
+/* Custom styles for Chess Tournament Explorer */
+
+/* Add some depth to cards on hover */
+.tournament-card:hover {
+    transform: translateY(-2px);
+}
+
+/* Improve visibility of tournament type badges */
+.tournament-type-badge,
+.tournament-category-badge {
+    display: inline-block;
+}
+
+/* Hide tournament URL if it's not available */
+.tournament-url[href="#"] {
+    display: none;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .tournament-card {
+        border-left-width: 2px;
+    }
+} 

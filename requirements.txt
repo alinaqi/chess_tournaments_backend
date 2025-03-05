@@ -14,3 +14,4 @@ anthropic
 pandas
 supabase
 crawl4ai
+jinja2

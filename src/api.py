@@ -10,16 +10,19 @@ import sys
 import os
 import asyncio
 from typing import Dict, List, Optional, Any
-from fastapi import FastAPI, HTTPException, Query, Depends
+from fastapi import FastAPI, HTTPException, Query, Depends, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
 
 # Add the src directory to the Python path
 sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
 
-from app.utils.logging_config import setup_logging
-from app.services.database import SupabaseClient
-from app.services.crawler import TournamentCrawler
-from app.models.tournament import Tournament, TournamentResponse
+from src.app.utils.logging_config import setup_logging
+from src.app.services.database import SupabaseClient
+from src.app.services.crawler import TournamentCrawler
+from src.app.models.tournament import Tournament, TournamentResponse
 
 # Load environment variables
 load_dotenv()
@@ -28,6 +31,10 @@ load_dotenv()
 setup_logging()
 logger = logging.getLogger(__name__)
 
+# Get the current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(current_dir)  # Get the parent directory (the project root)
+
 # Initialize FastAPI
 app = FastAPI(
     title="Chess Tournament API",
@@ -35,8 +42,19 @@ app = FastAPI(
     version="0.1.0"
 )
 
+# Mount static files directory
+app.mount("/static", StaticFiles(directory=os.path.join(current_dir, "app/static")), name="static")
+
+# Set up templates
+templates = Jinja2Templates(directory=os.path.join(current_dir, "app/templates"))
+
 # Initialize database client
 db_client = SupabaseClient()
+
+@app.get("/", response_class=HTMLResponse)
+async def index(request: Request):
+    """Serve the main frontend page."""
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/health")
 async def health_check():

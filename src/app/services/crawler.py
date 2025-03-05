@@ -47,12 +47,16 @@ class TournamentCrawler:
         Returns:
             List of processed Tournament objects
         """
+        logger.debug(f"Starting to process {len(tournaments)} tournaments")
+        
         # Enhance tournaments with LLM analysis
         enhanced_tournaments = await self.analyzer.analyze_tournaments(tournaments)
+        logger.debug(f"Enhanced {len(enhanced_tournaments)} tournaments with AI analysis")
         
         # Save to database
         saved_tournaments = []
         for tournament in enhanced_tournaments:
+            logger.debug(f"Processing tournament: {tournament.name}")
             # Check if tournament already exists
             exists = await self.db_client.check_tournament_exists(
                 tournament.name, tournament.month, tournament.year
@@ -60,13 +64,15 @@ class TournamentCrawler:
             
             if not exists:
                 # Insert new tournament
-                await self.db_client.insert_tournament(tournament)
+                result = await self.db_client.insert_tournament(tournament)
                 logger.info(f"Saved new tournament: {tournament.name}")
+                logger.debug(f"Insertion result: {result is not None}")
             else:
                 logger.info(f"Tournament already exists: {tournament.name}")
             
             saved_tournaments.append(tournament)
         
+        logger.debug(f"Completed processing tournaments. Saved count: {len(saved_tournaments)}")
         return saved_tournaments
     
     async def crawl(self) -> List[Tournament]:

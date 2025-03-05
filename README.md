@@ -8,6 +8,8 @@ A Python application that periodically crawls and analyzes chess tournament info
 - Extraction of tournament details including name, date, location, and category
 - AI-powered analysis of tournament data using Anthropic Claude
 - REST API for accessing tournament data
+- Modern HTML/JavaScript frontend for exploring tournament data
+- Filtering and search capabilities for tournaments
 - Database storage of tournament information
 - Scheduled crawling at configurable intervals
 
@@ -15,6 +17,8 @@ A Python application that periodically crawls and analyzes chess tournament info
 
 - Python 3.8+
 - FastAPI for REST API
+- Jinja2 for HTML templating
+- HTML, CSS (with Tailwind CSS), and JavaScript for frontend
 - BeautifulSoup and Requests for web scraping
 - Anthropic Claude for AI analysis
 - Supabase for database storage
