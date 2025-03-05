@@ -1,0 +1,16 @@
+requests
+beautifulsoup4
+lxml
+python-dotenv
+schedule
+aiohttp
+fastapi
+uvicorn
+pydantic
+httpx
+python-dateutil
+pytest
+anthropic
+pandas
+supabase
+crawl4ai
