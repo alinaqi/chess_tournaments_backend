@@ -84,19 +84,38 @@ class TournamentCrawler:
         """
         logger.info("Starting crawl operation")
         
-        # Step 1: Scrape tournaments
-        tournaments = await self.scraper.scrape()
-        if not tournaments:
-            logger.warning("No tournaments found during scraping")
-            return []
+        # Debug environment variables
+        logger.info(f"USE_MOCK_DB = {os.getenv('USE_MOCK_DB')}")
+        logger.info(f"SUPABASE_URL = {os.getenv('SUPABASE_URL') is not None}")
+        logger.info(f"SUPABASE_KEY = {os.getenv('SUPABASE_KEY') is not None}")
+        logger.info(f"SUPABASE_SERVICE_ROLE = {os.getenv('SUPABASE_SERVICE_ROLE') is not None}")
+        logger.info(f"SUPABASE_TABLE_PREFIX = {os.getenv('SUPABASE_TABLE_PREFIX')}")
+        logger.info(f"Database client class: {self.db_client.__class__.__name__}")
         
-        logger.info(f"Scraped {len(tournaments)} tournaments")
-        
-        # Step 2: Process tournaments
-        processed_tournaments = await self.process_tournaments(tournaments)
-        
-        logger.info(f"Crawl operation completed, processed {len(processed_tournaments)} tournaments")
-        return processed_tournaments
+        try:
+            # Step 1: Scrape tournaments
+            tournaments = await self.scraper.scrape()
+            if not tournaments:
+                logger.warning("No tournaments found during scraping")
+                # Record empty crawl history
+                await self.db_client.record_crawl_history(0, "success")
+                return []
+            
+            logger.info(f"Scraped {len(tournaments)} tournaments")
+            
+            # Step 2: Process tournaments
+            processed_tournaments = await self.process_tournaments(tournaments)
+            
+            # Record successful crawl history
+            await self.db_client.record_crawl_history(len(processed_tournaments), "success")
+            
+            logger.info(f"Crawl operation completed, processed {len(processed_tournaments)} tournaments")
+            return processed_tournaments
+        except Exception as e:
+            logger.error(f"Crawl operation failed: {str(e)}")
+            # Record failed crawl history
+            await self.db_client.record_crawl_history(0, "failed", str(e))
+            raise
     
     def start_scheduled_crawling(self):
         """
