@@ -40,7 +40,14 @@ class TournamentAnalyzer:
         if not self.api_key:
             logger.warning("Anthropic API key not set. AI analysis will not be available.")
         else:
-            self.client = Anthropic(api_key=self.api_key)
+            # Create Anthropic client with only the API key
+            try:
+                self.client = Anthropic(api_key=self.api_key)
+                logger.info("Anthropic client initialized successfully")
+            except Exception as e:
+                logger.error(f"Failed to initialize Anthropic client: {str(e)}")
+                logger.warning("AI analysis will not be available")
+                self.api_key = None
             
             # Setup the prompt template
             self.prompt_template = """

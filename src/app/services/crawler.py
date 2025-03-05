@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from ..models.tournament import Tournament
 from .scraper import SchachinterScraper
 from .analyzer import TournamentAnalyzer
-from .database import SupabaseClient
+from .database import get_database_client
 
 # Load environment variables
 load_dotenv()
@@ -28,7 +28,7 @@ class TournamentCrawler:
         """
         self.scraper = SchachinterScraper()
         self.analyzer = TournamentAnalyzer()
-        self.db_client = SupabaseClient()
+        self.db_client = get_database_client()
         
         # Get crawl interval from environment variables (default to 24 hours)
         try:
