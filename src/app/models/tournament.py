@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 
@@ -40,10 +40,20 @@ class Tournament(BaseModel):
         }
 
 
+class PaginationMeta(BaseModel):
+    """
+    Pydantic model for pagination metadata.
+    """
+    total: int = Field(..., description="Total number of items available")
+    page: int = Field(..., description="Current page number")
+    page_size: int = Field(..., description="Number of items per page")
+    pages: int = Field(..., description="Total number of pages")
+
+
 class TournamentResponse(BaseModel):
     """
-    Pydantic model for API responses containing tournament data.
+    Pydantic model for API responses containing tournament data with pagination.
     """
     status: str = "success"
-    data: List[Tournament]
-    count: int 
+    data: List[Any]  # Using Any to accommodate both Tournament objects and raw dictionaries
+    meta: Optional[PaginationMeta] = None 

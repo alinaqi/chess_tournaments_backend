@@ -75,33 +75,87 @@ class MockDatabaseClient:
             logger.error(f"Error inserting tournament {tournament.name}: {str(e)}")
             raise
     
-    async def get_tournaments(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    async def get_tournaments(self, filters: Optional[Dict[str, Any]] = None, pagination: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
         """
-        Retrieve tournaments from the mock database with optional filtering.
+        Retrieve tournaments from in-memory storage with optional filtering and pagination.
         
         Args:
-            filters: Optional dictionary of filter conditions
+            filters: Dictionary of filter criteria
+            pagination: Dictionary with pagination parameters (page, page_size)
             
         Returns:
-            List of tournament dictionaries
+            Dictionary containing data, total count, and pages information
         """
         try:
-            if not filters:
-                return self.tournaments
+            # Start with all tournaments
+            result = self.tournaments
             
-            filtered_tournaments = []
-            for tournament in self.tournaments:
-                matches = True
-                for key, value in filters.items():
-                    if key not in tournament or tournament[key] != value:
-                        matches = False
-                        break
+            # Apply filters if provided
+            if filters:
+                filtered_result = []
+                for tournament in result:
+                    match = True
+                    
+                    # Handle text search separately
+                    if 'search' in filters:
+                        search_term = filters['search'].lower()
+                        search_match = False
+                        # Search in name, description, and city
+                        if ('name' in tournament and tournament['name'] and 
+                            search_term in tournament['name'].lower()):
+                            search_match = True
+                        elif ('description' in tournament and tournament['description'] and 
+                              search_term in tournament['description'].lower()):
+                            search_match = True
+                        elif ('city' in tournament and tournament['city'] and 
+                              search_term in tournament['city'].lower()):
+                            search_match = True
+                        
+                        if not search_match:
+                            match = False
+                            continue
+                    
+                    # Apply other filters
+                    for key, value in filters.items():
+                        if key == 'search':
+                            continue  # Skip search as we handled it separately
+                        
+                        if key not in tournament or tournament[key] != value:
+                            match = False
+                            break
+                    
+                    if match:
+                        filtered_result.append(tournament)
+                result = filtered_result
+            
+            # Get total count before pagination
+            total_count = len(result)
+            
+            # Apply pagination if provided
+            if pagination:
+                page = pagination.get('page', 1)
+                page_size = pagination.get('page_size', 10)
                 
-                if matches:
-                    filtered_tournaments.append(tournament)
+                # Calculate slice indices
+                start = (page - 1) * page_size
+                end = min(start + page_size, len(result))
+                
+                # Slice the result
+                result = result[start:end]
+                
+                # Calculate total pages
+                total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            else:
+                total_pages = 1
             
-            logger.info(f"Retrieved {len(filtered_tournaments)} tournaments from mock DB")
-            return filtered_tournaments
+            logger.info(f"Retrieved {len(result)} tournaments")
+            
+            # Return paginated results and metadata
+            return {
+                "data": result,
+                "total": total_count,
+                "pages": total_pages
+            }
         except Exception as e:
             logger.error(f"Error retrieving tournaments: {str(e)}")
             raise
@@ -371,34 +425,69 @@ class SupabaseClient:
             logger.debug(f"Tournament data: {tournament_dict}")
             raise
     
-    async def get_tournaments(self, filters: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+    async def get_tournaments(self, filters: Optional[Dict[str, Any]] = None, pagination: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
         """
-        Retrieve tournaments from Supabase with optional filtering.
+        Retrieve tournaments from Supabase with optional filtering and pagination.
         
         Args:
             filters: Dictionary of filter criteria
+            pagination: Dictionary with pagination parameters (page, page_size)
             
         Returns:
-            List of tournament data dictionaries
+            Dictionary containing data, total count, and pages information
         """
         try:
             # Start with a base query
-            query = self.client.table(self.tournaments_table).select('*')
+            query = self.client.table(self.tournaments_table).select('*', count='exact')
             
-            # Apply filters if provided
+            # Apply text search if provided
+            if filters and 'search' in filters:
+                search_term = filters.pop('search')
+                # Search in name and description fields
+                query = query.or_(f"name.ilike.%{search_term}%,description.ilike.%{search_term}%,city.ilike.%{search_term}%")
+            
+            # Apply remaining filters if provided
             if filters:
                 for key, value in filters.items():
                     query = query.eq(key, value)
             
+            # Get total count first
+            count_response = query.execute()
+            total_count = count_response.count
+            
+            # Apply pagination if provided
+            if pagination:
+                page = pagination.get('page', 1)
+                page_size = pagination.get('page_size', 10)
+                
+                # Calculate range and limits
+                start = (page - 1) * page_size
+                end = page * page_size - 1
+                
+                # Add range to query
+                query = query.range(start, end)
+                
+                # Calculate total pages
+                total_pages = (total_count + page_size - 1) // page_size if total_count > 0 else 1
+            else:
+                total_pages = 1
+            
             # Execute the query
             response = query.execute()
             
+            data = []
             if response.data:
                 logger.info(f"Retrieved {len(response.data)} tournaments")
-                return response.data
+                data = response.data
             else:
                 logger.info("No tournaments found")
-                return []
+            
+            # Return paginated results and metadata
+            return {
+                "data": data,
+                "total": total_count,
+                "pages": total_pages
+            }
         except Exception as e:
             logger.error(f"Error retrieving tournaments: {str(e)}")
             raise

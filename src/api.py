@@ -67,10 +67,13 @@ async def get_tournaments(
     year: Optional[int] = Query(None, description="Filter by year"),
     is_international: Optional[bool] = Query(None, description="Filter by international status"),
     tournament_type: Optional[str] = Query(None, description="Filter by tournament type"),
-    category: Optional[str] = Query(None, description="Filter by category")
+    category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(None, description="Search text in tournament name and description"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(12, ge=1, le=100, description="Number of items per page")
 ):
     """
-    Get a list of tournaments with optional filtering.
+    Get a list of tournaments with optional filtering and pagination.
     
     Args:
         month: Filter by month (e.g., "January")
@@ -78,9 +81,12 @@ async def get_tournaments(
         is_international: Filter by international status
         tournament_type: Filter by tournament type (e.g., "Standard", "Rapid", "Blitz")
         category: Filter by category (e.g., "Open", "Women", "Youth", "Senior")
+        search: Search text in tournament name and description
+        page: Page number (starting from 1)
+        page_size: Number of items per page
         
     Returns:
-        List of tournaments matching the filter criteria
+        List of tournaments matching the filter criteria with pagination metadata
     """
     try:
         # Prepare filters
@@ -95,20 +101,31 @@ async def get_tournaments(
             filters["tournament_type"] = tournament_type
         if category:
             filters["category"] = category
+        if search:
+            filters["search"] = search
+        
+        # Add pagination parameters
+        pagination = {
+            "page": page,
+            "page_size": page_size
+        }
         
         # Query database
-        tournaments_data = await db_client.get_tournaments(filters)
+        tournaments_result = await db_client.get_tournaments(filters, pagination)
         
-        # Convert to Tournament objects
-        tournaments = [Tournament(**tournament) for tournament in tournaments_data]
-        
+        # Return response
         return {
             "status": "success",
-            "data": tournaments,
-            "count": len(tournaments)
+            "data": tournaments_result["data"],
+            "meta": {
+                "total": tournaments_result["total"],
+                "page": page,
+                "page_size": page_size,
+                "pages": tournaments_result["pages"]
+            }
         }
     except Exception as e:
-        logger.error(f"Error retrieving tournaments: {str(e)}")
+        logger.error(f"Error retrieving tournaments: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/crawl")
@@ -142,7 +159,7 @@ async def get_available_months():
     """
     try:
         tournaments_data = await db_client.get_tournaments()
-        months = sorted(set(tournament["month"] for tournament in tournaments_data if "month" in tournament))
+        months = sorted(set(tournament["month"] for tournament in tournaments_data["data"] if "month" in tournament))
         
         return {
             "status": "success",
@@ -162,7 +179,7 @@ async def get_available_years():
     """
     try:
         tournaments_data = await db_client.get_tournaments()
-        years = sorted(set(tournament["year"] for tournament in tournaments_data if "year" in tournament))
+        years = sorted(set(tournament["year"] for tournament in tournaments_data["data"] if "year" in tournament))
         
         return {
             "status": "success",
@@ -181,9 +198,7 @@ async def get_available_categories():
         List of unique categories
     """
     try:
-        tournaments_data = await db_client.get_tournaments()
-        categories = sorted(set(tournament["category"] for tournament in tournaments_data 
-                              if "category" in tournament and tournament["category"]))
+        categories = await db_client.get_available_categories()
         
         return {
             "status": "success",
@@ -202,9 +217,7 @@ async def get_available_tournament_types():
         List of unique tournament types
     """
     try:
-        tournaments_data = await db_client.get_tournaments()
-        types = sorted(set(tournament["tournament_type"] for tournament in tournaments_data 
-                         if "tournament_type" in tournament and tournament["tournament_type"]))
+        types = await db_client.get_available_tournament_types()
         
         return {
             "status": "success",

@@ -5,12 +5,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const monthSelect = document.getElementById('month');
     const yearSelect = document.getElementById('year');
     const categorySelect = document.getElementById('category');
+    const searchInput = document.getElementById('search-input');
+    const searchClearBtn = document.getElementById('search-clear-btn');
     const searchButton = document.getElementById('search-btn');
     const tournamentsContainer = document.getElementById('tournaments-container');
     const tournamentsList = document.getElementById('tournaments-list');
     const loadingIndicator = document.getElementById('loading');
     const noResultsMessage = document.getElementById('no-results');
     const tournamentCardTemplate = document.getElementById('tournament-card-template');
+    const paginationContainer = document.getElementById('pagination-container');
+    const paginationInfo = document.getElementById('pagination-info');
+    const pageNumbers = document.getElementById('page-numbers');
+    const prevPageBtn = document.getElementById('prev-page');
+    const nextPageBtn = document.getElementById('next-page');
+    const pageNumberTemplate = document.getElementById('page-number-template');
+
+    // State variables
+    let currentPage = 1;
+    let totalPages = 1;
+    let pageSize = 12;
+    let currentFilters = {};
 
     // Initialize the application
     init();
@@ -29,6 +43,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Set up event listeners
         searchButton.addEventListener('click', handleSearch);
+        searchInput.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                handleSearch();
+            }
+        });
+        searchClearBtn.addEventListener('click', clearSearch);
+        prevPageBtn.addEventListener('click', goToPrevPage);
+        nextPageBtn.addEventListener('click', goToNextPage);
+    }
+
+    // Clear search field
+    function clearSearch() {
+        searchInput.value = '';
+        if (currentFilters.search) {
+            delete currentFilters.search;
+            handleSearch();
+        }
     }
 
     // Load months for the filter
@@ -109,11 +140,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Handle search button click
     async function handleSearch() {
-        await loadTournaments({
+        // Reset to first page when searching
+        currentPage = 1;
+        
+        // Update filters
+        currentFilters = {
             month: monthSelect.value,
             year: yearSelect.value,
-            category: categorySelect.value
-        });
+            category: categorySelect.value,
+        };
+        
+        // Add search query if not empty
+        const searchQuery = searchInput.value.trim();
+        if (searchQuery) {
+            currentFilters.search = searchQuery;
+        }
+        
+        // Load tournaments with new filters
+        await loadTournaments(currentFilters);
+    }
+
+    // Go to previous page
+    async function goToPrevPage() {
+        if (currentPage > 1) {
+            currentPage--;
+            await loadTournaments(currentFilters);
+        }
+    }
+
+    // Go to next page
+    async function goToNextPage() {
+        if (currentPage < totalPages) {
+            currentPage++;
+            await loadTournaments(currentFilters);
+        }
+    }
+
+    // Go to specific page
+    async function goToPage(page) {
+        if (page >= 1 && page <= totalPages) {
+            currentPage = page;
+            await loadTournaments(currentFilters);
+        }
     }
 
     // Load tournament data with optional filters
@@ -124,9 +192,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Build query string from filters
             const queryParams = new URLSearchParams();
+            
+            // Add all filters to query params
             Object.entries(filters).forEach(([key, value]) => {
                 if (value) queryParams.append(key, value);
             });
+            
+            // Add pagination params
+            queryParams.append('page', currentPage);
+            queryParams.append('page_size', pageSize);
             
             // Fetch tournaments
             const url = `/api/tournaments${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
@@ -136,9 +210,14 @@ document.addEventListener('DOMContentLoaded', () => {
             // Clear current tournaments
             tournamentsList.innerHTML = '';
             
-            if (data.status === 'success' && Array.isArray(data.data)) {
+            if (data.status === 'success') {
+                // Update pagination information
+                if (data.meta) {
+                    updatePagination(data.meta);
+                }
+                
                 // Display tournaments
-                if (data.data.length > 0) {
+                if (Array.isArray(data.data) && data.data.length > 0) {
                     displayTournaments(data.data);
                     showNoResults(false);
                 } else {
@@ -154,6 +233,74 @@ document.addEventListener('DOMContentLoaded', () => {
             // Hide loading indicator
             showLoading(false);
         }
+    }
+
+    // Update pagination controls
+    function updatePagination(meta) {
+        const total = meta.total;
+        currentPage = meta.page;
+        pageSize = meta.page_size;
+        totalPages = meta.pages;
+        
+        // Update info text
+        const startItem = (currentPage - 1) * pageSize + 1;
+        const endItem = Math.min(currentPage * pageSize, total);
+        paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${total} tournaments`;
+        
+        // Enable/disable prev/next buttons
+        prevPageBtn.disabled = currentPage <= 1;
+        nextPageBtn.disabled = currentPage >= totalPages;
+        
+        // Generate page number buttons
+        pageNumbers.innerHTML = '';
+        
+        // Determine which page numbers to show
+        let startPage = Math.max(1, currentPage - 2);
+        let endPage = Math.min(totalPages, startPage + 4);
+        
+        // Adjust start page if necessary
+        if (endPage - startPage < 4 && startPage > 1) {
+            startPage = Math.max(1, endPage - 4);
+        }
+        
+        // Add first page and ellipsis if necessary
+        if (startPage > 1) {
+            addPageNumberButton(1);
+            if (startPage > 2) {
+                addEllipsis();
+            }
+        }
+        
+        // Add page number buttons
+        for (let i = startPage; i <= endPage; i++) {
+            addPageNumberButton(i);
+        }
+        
+        // Add ellipsis and last page if necessary
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                addEllipsis();
+            }
+            addPageNumberButton(totalPages);
+        }
+    }
+
+    // Add page number button
+    function addPageNumberButton(pageNum) {
+        const pageButton = document.importNode(pageNumberTemplate.content, true).querySelector('button');
+        pageButton.textContent = pageNum;
+        pageButton.classList.toggle('bg-blue-500', pageNum === currentPage);
+        pageButton.classList.toggle('text-white', pageNum === currentPage);
+        pageButton.addEventListener('click', () => goToPage(pageNum));
+        pageNumbers.appendChild(pageButton);
+    }
+
+    // Add ellipsis to pagination
+    function addEllipsis() {
+        const ellipsis = document.createElement('span');
+        ellipsis.textContent = '...';
+        ellipsis.className = 'px-3 py-1 text-gray-500';
+        pageNumbers.appendChild(ellipsis);
     }
 
     // Display tournaments in the list
